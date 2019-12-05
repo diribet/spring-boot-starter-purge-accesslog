@@ -16,9 +16,10 @@
 
 package com.marcosbarbero.boot.purge.accesslog;
 
-import com.marcosbarbero.boot.purge.accesslog.holder.TomcatPurgeAccessLogHolder;
-import com.marcosbarbero.boot.purge.accesslog.holder.UndertowPurgeAccessLogHolder;
-import com.marcosbarbero.boot.purge.accesslog.properties.PurgeProperties;
+import static com.marcosbarbero.boot.purge.accesslog.properties.PurgeProperties.PREFIX;
+
+import java.nio.file.Paths;
+
 import org.apache.catalina.valves.AccessLogValve;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -27,14 +28,14 @@ import org.springframework.boot.autoconfigure.web.ServerProperties.Tomcat.Access
 import org.springframework.boot.autoconfigure.web.ServerProperties.Undertow;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
-import org.springframework.boot.web.embedded.undertow.ConfigurableUndertowWebServerFactory;
+import org.springframework.boot.web.embedded.undertow.UndertowServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.nio.file.Paths;
-
-import static com.marcosbarbero.boot.purge.accesslog.properties.PurgeProperties.PREFIX;
+import com.marcosbarbero.boot.purge.accesslog.holder.TomcatPurgeAccessLogHolder;
+import com.marcosbarbero.boot.purge.accesslog.holder.UndertowPurgeAccessLogHolder;
+import com.marcosbarbero.boot.purge.accesslog.properties.PurgeProperties;
 
 /**
  * The type Purge access log auto configuration.
@@ -60,15 +61,19 @@ public class PurgeAccessLogAutoConfiguration {
          * @return the embedded servlet container customizer
          */
         @Bean
-        public WebServerFactoryCustomizer<ConfigurableUndertowWebServerFactory> purgeAccessLogCustomizer(
-                final ServerProperties serverProperties,
-                final PurgeProperties purgeProperties) {
+        public WebServerFactoryCustomizer<UndertowServletWebServerFactory> purgeAccessLogCustomizer(
+                ServerProperties serverProperties,
+                PurgeProperties purgeProperties) {
+
             return factory -> {
-                final Undertow.Accesslog accesslog = serverProperties.getUndertow()
-                        .getAccesslog();
-                final UndertowPurgeAccessLogHolder accessLogHolder = new UndertowPurgeAccessLogHolder(
-                        purgeProperties, accesslog.getDir().toPath(),
-                        accesslog.getPrefix(), accesslog.getSuffix());
+                Undertow.Accesslog accesslog = serverProperties.getUndertow().getAccesslog();
+
+                UndertowPurgeAccessLogHolder accessLogHolder =
+		                new UndertowPurgeAccessLogHolder(purgeProperties,
+		                                                 accesslog.getDir().toPath(),
+		                                                 accesslog.getPrefix(),
+		                                                 accesslog.getSuffix());
+
                 factory.addDeploymentInfoCustomizers(accessLogHolder);
             };
         }
@@ -90,17 +95,24 @@ public class PurgeAccessLogAutoConfiguration {
          */
         @Bean
         public WebServerFactoryCustomizer<TomcatServletWebServerFactory> purgeAccessLogCustomizer(
-                final ServerProperties serverProperties,
-                final PurgeProperties purgeProperties) {
+                ServerProperties serverProperties,
+                PurgeProperties purgeProperties) {
+
             return factory -> {
-                final Accesslog accesslog = serverProperties.getTomcat().getAccesslog();
-                factory.getEngineValves().stream()
-                        .filter(valve -> valve instanceof AccessLogValve)
-                        .map(valve -> (AccessLogValve) valve).findFirst()
-                        .ifPresent(valve -> {
-                            final TomcatPurgeAccessLogHolder accessLogHolder = new TomcatPurgeAccessLogHolder(
-                                    purgeProperties, Paths.get(accesslog.getDirectory()),
-                                    accesslog.getPrefix(), accesslog.getSuffix(), valve);
+                Accesslog accesslog = serverProperties.getTomcat().getAccesslog();
+
+                factory.getEngineValves()
+                       .stream()
+                       .filter(valve -> valve instanceof AccessLogValve)
+                       .map(valve -> (AccessLogValve) valve).findFirst()
+                       .ifPresent(valve -> {
+                            TomcatPurgeAccessLogHolder accessLogHolder =
+		                            new TomcatPurgeAccessLogHolder(purgeProperties,
+		                                                           Paths.get(accesslog.getDirectory()),
+		                                                           accesslog.getPrefix(),
+		                                                           accesslog.getSuffix(),
+		                                                           valve);
+
                             factory.addContextCustomizers(accessLogHolder);
                         });
             };
