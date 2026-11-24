@@ -14,7 +14,7 @@
         ]]>
 	</description>
 	<url>https://github.com/marcosbarbero/spring-boot-starter-purge-accesslog</url>
-	<version>3.3.8.diribet</version>
+	<version>3.3.8.diribet.1</version>
 
 	<licenses>
 		<license>
@@ -105,11 +105,11 @@
 
 	<distributionManagement>
 		<repository>
-			<id>diribet.release</id>
+			<id>diribet-releases</id>
 			<url>https://ci.diribet.com/nexus/content/repositories/releases</url>
 		</repository>
 		<snapshotRepository>
-			<id>diribet.snapshot</id>
+			<id>diribet-snapshots</id>
 			<url>https://ci.diribet.com/nexus/content/repositories/snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>

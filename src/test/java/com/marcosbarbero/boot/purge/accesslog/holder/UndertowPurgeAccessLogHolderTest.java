@@ -18,7 +18,9 @@ package com.marcosbarbero.boot.purge.accesslog.holder;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.springframework.boot.autoconfigure.web.ServerProperties.Undertow.Accesslog;
 
@@ -28,7 +30,9 @@ import static com.marcosbarbero.boot.purge.accesslog.holder.helper.TestUtils.res
 import static java.nio.file.Files.createFile;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import com.marcosbarbero.boot.purge.accesslog.properties.PurgeProperties;
 
@@ -107,6 +111,18 @@ public class UndertowPurgeAccessLogHolderTest {
 		fileNames = this.accesslog.getDir().list();
 		assertNotNull(fileNames);
 		assertEquals(1, fileNames.length);
+	}
+
+	@Test
+	public void testPurgeWorkerIsDaemonThread() {
+		this.holderUnderTest.customize(null);
+
+		// All workers: the executors of the other tests in this JVM are not shut down.
+		final List<Thread> workers = Thread.getAllStackTraces().keySet().stream()
+				.filter(thread -> "access-log-purge-worker".equals(thread.getName()))
+				.collect(Collectors.toList());
+		assertFalse("Thread access-log-purge-worker not found", workers.isEmpty());
+		assertTrue("The purge worker must not keep the JVM alive", workers.stream().allMatch(Thread::isDaemon));
 	}
 
 }

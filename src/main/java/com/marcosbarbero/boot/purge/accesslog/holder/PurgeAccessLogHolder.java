@@ -81,7 +81,16 @@ public abstract class PurgeAccessLogHolder {
 		final String executionIntervalUnit = this.purgeProperties
 				.getExecutionIntervalUnit().name();
 
-		ThreadFactory threadFactory = r -> new Thread(r, "access-log-purge-worker");
+		// Daemon thread: the executor is not a Spring bean, and nobody shuts it down when the context closes.
+		// A non-daemon thread would keep the JVM alive after the context is closed, for example after a failed start.
+		ThreadFactory threadFactory = r -> {
+			Thread thread = new Thread(r, "access-log-purge-worker");
+			thread.setDaemon(true);
+			return thread;
+		};
+
+		// Not closed: the executor must run the purge task for the life of the application.
+		@SuppressWarnings("resource")
 		ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(threadFactory);
 
 		executor.scheduleWithFixedDelay(purgeTask,
